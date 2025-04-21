@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>美元兑人民币中间价走势图</title>
+    <!-- 引入ECharts图表库 -->
+    <script src="js/echarts.min.js"></script>
+    <!-- 引入Axios用于HTTP请求 -->
+    <script src="js/axios.min.js"></script>
+    <style>
+        /* 基础样式设置 */
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #1a1a1a;
+            color: #fff;
+            font-family: "Microsoft YaHei", sans-serif;
+        }
+        /* 容器样式，使用flex布局居中显示 */
+        .container {
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        /* 标题样式 */
+        .title {
+            font-size: 2.5rem;
+            margin-bottom: 2rem;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+        }
+        /* 更新时间显示样式 */
+        .update-time {
+            font-size: 1rem;
+            margin-bottom: 1rem;
+            color: #aaa;
+        }
+        /* 图表容器样式 */
+        #chart {
+            width: 90%;
+            height: 70%;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="title">美元兑人民币中间价走势图</h1>
+        <div class="update-time" id="updateTime">最后更新时间：</div>
+        <div id="chart"></div>
+    </div>
+
+    <script>
+        // 初始化图表实例
+        const chartDom = document.getElementById('chart');
+        const myChart = echarts.init(chartDom);
+        const updateTimeElement = document.getElementById('updateTime');
+
+        // 存储历史数据的对象
+        let historicalData = {
+            dates: [],
+            rates: []
+        };
+
+        // 从后端API获取汇率数据
+        async function fetchExchangeRateData() {
+            try {
+                // 发送GET请求获取历史数据
+                const response = await axios.get('http://localhost:5000/api/rates');
+                return response.data;
+            } catch (error) {
+                console.error('获取数据失败:', error);
+                return null;
+            }
+        }
+
+        // 更新图表显示
+        function updateChartDisplay(data) {
+            // 计算Y轴范围
+            const minRate = Math.min(...data.rates);
+            const maxRate = Math.max(...data.rates);
+            const padding = 0.1; // 上下各留0.1的padding
+            
+            // ECharts配置项
+            const option = {
+                // 设置透明背景
+                backgroundColor: 'transparent',
+                // 提示框配置
+                tooltip: {
+                    trigger: 'axis',
+                    formatter: function(params) {
+                        return `日期：${params[0].name}<br/>汇率：${params[0].value}`;
+                    }
+                },
+                // 图表网格配置
+                grid: {
+                    left: '3%',
+                    right: '4%',
+                    bottom: '3%',
+                    containLabel: true
+                },
+                // X轴配置
+                xAxis: {
+                    type: 'category',
+                    data: data.dates,
+                    axisLine: {
+                        lineStyle: {
+                            color: '#fff'
+                        }
+                    },
+                    axisLabel: {
+                        color: '#fff',
+                        // 格式化日期显示，只显示月-日
+                        formatter: function(value) {
+                            return value.split('-').slice(1).join('-');
+                        }
+                    }
+                },
+                // Y轴配置
+                yAxis: {
+                    type: 'value',
+                    axisLine: {
+                        lineStyle: {
+                            color: '#fff'
+                        }
+                    },
+                    axisLabel: {
+                        color: '#fff',
+                        formatter: '{value}'
+                    },
+                    splitLine: {
+                        lineStyle: {
+                            color: 'rgba(255, 255, 255, 0.1)'
+                        }
+                    },
+                    min: (minRate - padding).toFixed(4),
+                    max: (maxRate + padding).toFixed(4),
+                    interval: 0.1
+                },
+                // 数据系列配置
+                series: [{
+                    data: data.rates,
+                    type: 'line',
+                    smooth: true,
+                    symbol: 'circle',
+                    symbolSize: 8,
+                    lineStyle: {
+                        width: 3,
+                        color: '#00ff00'
+                    },
+                    itemStyle: {
+                        color: '#00ff00',
+                        borderColor: '#fff',
+                        borderWidth: 2
+                    },
+                    // 区域填充样式
+                    areaStyle: {
+                        color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                            {
+                                offset: 0,
+                                color: 'rgba(0, 255, 0, 0.3)'
+                            },
+                            {
+                                offset: 1,
+                                color: 'rgba(0, 255, 0, 0.1)'
+                            }
+                        ])
+                    }
+                }]
+            };
+
+            // 应用配置到图表
+            myChart.setOption(option);
+            // 更新最后更新时间显示
+            updateTimeElement.textContent = `最后更新时间：${new Date().toLocaleString()}`;
+        }
+
+        // 更新图表数据
+        async function updateChart() {
+            // 获取最新数据
+            const data = await fetchExchangeRateData();
+            if (data) {
+                // 更新图表显示
+                updateChartDisplay(data);
+            }
+        }
+
+        // 初始加载数据
+        updateChart();
+
+        // 每5分钟自动更新一次数据
+        setInterval(updateChart, 5 * 60 * 1000);
+
+        // 监听窗口大小变化，调整图表大小
+        window.addEventListener('resize', function() {
+            myChart.resize();
+        });
+    </script>
+</body>
+</html> 
