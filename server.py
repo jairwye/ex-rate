@@ -7,9 +7,18 @@ import json
 import time
 from apscheduler.schedulers.background import BackgroundScheduler
 import os
+from dotenv import load_dotenv
+
+# 加载环境变量
+load_dotenv()
 
 app = Flask(__name__, static_folder='.')
 CORS(app, resources={r"/*": {"origins": "*"}})  # 允许所有来源的跨域请求
+
+# 从环境变量获取配置
+PORT = int(os.getenv('PORT', 5000))
+HOST = os.getenv('HOST', '0.0.0.0')
+DB_PATH = os.getenv('DB_PATH', 'exchange_rate.db')
 
 # 汇率API配置
 EXCHANGE_API_SOURCES = [
@@ -22,7 +31,7 @@ EXCHANGE_API_SOURCES = [
 # 数据库初始化
 def init_db():
     try:
-        conn = sqlite3.connect('exchange_rate.db')
+        conn = sqlite3.connect(DB_PATH)
         c = conn.cursor()
         # 创建汇率表
         c.execute('''CREATE TABLE IF NOT EXISTS rates
@@ -41,7 +50,7 @@ def get_exchange_rate(date=None):
         print(f"尝试获取{date}的汇率数据")
         
         # 首先检查数据库中是否已有最终数据
-        conn = sqlite3.connect('exchange_rate.db')
+        conn = sqlite3.connect(DB_PATH)
         c = conn.cursor()
         c.execute("SELECT rate FROM rates WHERE date = ? AND is_final = 1", (date,))
         result = c.fetchone()
@@ -111,7 +120,7 @@ def finalize_today_data():
             print(f"未能获取{today}的数据，无法标记为最终数据")
             return
             
-        conn = sqlite3.connect('exchange_rate.db')
+        conn = sqlite3.connect(DB_PATH)
         c = conn.cursor()
         
         # 更新数据并标记为最终数据
@@ -130,7 +139,7 @@ def update_today_rate():
         rates = get_exchange_rate(today)
         
         if rates:
-            conn = sqlite3.connect('exchange_rate.db')
+            conn = sqlite3.connect(DB_PATH)
             c = conn.cursor()
             # 只更新非最终数据
             c.execute("INSERT OR REPLACE INTO rates (date, rate, is_final) VALUES (?, ?, 0)", (today, rates[0][1]))
@@ -143,7 +152,7 @@ def update_today_rate():
 # 获取历史汇率数据
 def get_historical_rates():
     try:
-        conn = sqlite3.connect('exchange_rate.db')
+        conn = sqlite3.connect(DB_PATH)
         c = conn.cursor()
         
         # 获取所有数据，按日期排序
@@ -180,7 +189,7 @@ if __name__ == '__main__':
     init_db()  # 初始化数据库
     
     # 获取历史数据（如果数据库为空）
-    conn = sqlite3.connect('exchange_rate.db')
+    conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     c.execute("SELECT COUNT(*) FROM rates")
     count = c.fetchone()[0]
@@ -188,7 +197,7 @@ if __name__ == '__main__':
     
     if count == 0:
         print("\n数据库为空，开始获取历史数据...")
-        start_date = datetime.datetime(2025, 4, 2)
+        start_date = datetime.datetime(2024, 4, 2)
         end_date = datetime.datetime.now()
         current_date = start_date
         
@@ -197,7 +206,7 @@ if __name__ == '__main__':
             print(f"\n正在获取{date_str}的数据...")
             rates = get_exchange_rate(date_str)
             if rates:
-                conn = sqlite3.connect('exchange_rate.db')
+                conn = sqlite3.connect(DB_PATH)
                 c = conn.cursor()
                 # 将历史数据标记为最终数据
                 c.execute("INSERT OR REPLACE INTO rates (date, rate, is_final) VALUES (?, ?, 1)", 
@@ -217,4 +226,4 @@ if __name__ == '__main__':
     scheduler.start()
     
     # 启动服务器
-    app.run(debug=True, port=5000, host='0.0.0.0') 
+    app.run(debug=True, port=PORT, host=HOST) 
