@@ -1,0 +1,31 @@
+# Git
+.git
+.gitignore
+
+# Python
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+venv/
+.env
+
+# IDE
+.vscode/
+.idea/
+
+# Logs
+*.log
+
+# Local database
+exchange_rate.db
+
+# Windows specific
+*.bat
+
+# Other
+README.md
+Dockerfile
+docker-compose.yml
+.dockerignore 

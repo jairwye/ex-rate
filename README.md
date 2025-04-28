@@ -15,9 +15,35 @@
 - 后端：Python Flask
 - 前端：HTML5, ECharts
 - 数据库：SQLite
-- 定时任务：Schedule
+- 定时任务：APScheduler
+- 容器化：Docker
 
 ## 安装和使用
+
+### 使用 Docker 部署（推荐）
+
+1. 克隆仓库：
+```bash
+git clone https://github.com/jairwye/ex-rate.git
+cd ex-rate
+```
+
+2. 构建并启动服务：
+```bash
+docker-compose up --build
+```
+
+3. 在后台运行：
+```bash
+docker-compose up -d
+```
+
+4. 停止服务：
+```bash
+docker-compose down
+```
+
+### 手动部署
 
 1. 克隆仓库：
 ```bash
@@ -37,26 +63,21 @@ source venv/bin/activate  # Linux/Mac
 pip install -r requirements.txt
 ```
 
-4. 设置自动运行（Windows）：
+4. 启动服务器：
 ```bash
-.\setup_schedule.bat
-```
-
-5. 手动启动服务器：
-```bash
-.\start_schedule.bat
+python server.py
 ```
 
 ## 自动化功能
 
-- 每天 9:00 自动启动服务器
-- 每天 21:00 自动停止服务器
-- 每个工作日 10:10 自动更新汇率数据
+- 每小时自动更新汇率数据
+- 每天 20:00 将当天数据标记为最终数据
+- 自动检查并补充历史数据
 
 ## 访问应用
 
-启动服务器后，访问：
-- http://localhost:5000
+启动服务后，访问：
+- http://localhost:9088
 
 ## 数据来源
 
@@ -71,11 +92,12 @@ pip install -r requirements.txt
 ## 版本历史
 
 ### v1.1 (2024-03-21)
-- 优化了图表切换动画效果，参考 Apple 官网设计
+- 优化了图表切换动画效果
 - 实现了全屏图表显示
 - 改进了页面布局和标题显示
 - 优化了背景渐变效果
 - 提升了整体视觉体验
+- 支持 Docker 部署
 
 ### v1.0 (2024-03-20)
 - 初始版本发布

@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  web:
+    build: .
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./exchange_rate.db:/app/exchange_rate.db
+    environment:
+      - FLASK_ENV=production
+    restart: unless-stopped
+
+  scheduler:
+    build: .
+    command: python schedule_server.py
+    volumes:
+      - ./exchange_rate.db:/app/exchange_rate.db
+    environment:
+      - FLASK_ENV=production
+    restart: unless-stopped 

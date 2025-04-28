@@ -388,4 +388,4 @@ if __name__ == '__main__':
     scheduler.start()
     
     # 启动服务器
-    app.run(debug=True, port=PORT, host=HOST)
+    app.run(host='0.0.0.0', port=9088)
