@@ -4,7 +4,7 @@ services:
   web:
     build: .
     ports:
-      - "5000:5000"
+      - "9088:9088"
     volumes:
       - ./exchange_rate.db:/app/exchange_rate.db
     environment:

@@ -73,7 +73,7 @@ def update_exchange_rate():
     # 检查是否为工作日且在服务器运行时间内
     if is_workday() and is_server_running_time():
         try:
-            response = requests.post('http://localhost:5000/api/update')
+            response = requests.post('http://localhost:9088/api/update')
             if response.status_code == 200:
                 logging.info('汇率数据更新成功')
             else:
