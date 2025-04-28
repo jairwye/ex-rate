@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>美元兑人民币汇率走势图</title>
+    <title>汇率走势图 v1.1</title>
     <!-- 引入ECharts图表库 -->
     <script src="js/echarts.min.js"></script>
     <!-- 引入Axios用于HTTP请求 -->
@@ -17,57 +17,138 @@
             color: #fff;
             font-family: "Microsoft YaHei", sans-serif;
             overflow: hidden;
+            min-height: 100vh;
         }
         /* 容器样式 */
         .container {
             width: 100vw;
             height: 100vh;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
             position: relative;
+            overflow: hidden;
+            background: linear-gradient(135deg, 
+                rgba(0, 0, 255, 0.08) 0%,
+                rgba(0, 0, 255, 0.05) 25%,
+                rgba(0, 0, 255, 0.03) 50%,
+                rgba(0, 0, 255, 0) 100%);
         }
         /* 标题样式 */
         .title {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
             font-size: 2.5rem;
-            margin-bottom: 2rem;
-            text-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
-            position: relative;
-            z-index: 1;
+            text-shadow: 0 0 10px rgba(0, 0, 255, 0.3);
+            z-index: 10;
+            margin: 0;
+            padding: 0;
         }
         /* 更新时间显示样式 */
         .update-time {
+            position: fixed;
+            top: 100px;
+            left: 50%;
+            transform: translateX(-50%);
             font-size: 1rem;
-            margin-bottom: 1rem;
             color: #aaa;
-            position: relative;
-            z-index: 1;
+            z-index: 10;
+            transition: all 0.5s ease;
+            margin: 0;
+            padding: 0;
         }
         /* 图表容器样式 */
-        #chart {
-            width: 90%;
-            height: 70%;
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 15px;
-            box-shadow: 0 0 20px rgba(0, 255, 0, 0.2);
-            position: relative;
+        .chart-container {
+            width: 100vw;
+            height: 100vh;
+            position: fixed;
+            top: 0;
+            left: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            align-items: center;
+            transition: all 1.2s cubic-bezier(0.4, 0.1, 0.2, 1);
+            opacity: 0;
+            transform: translateY(100%) scale(0.95);
+            will-change: transform, opacity;
+            perspective: 1000px;
             z-index: 1;
+            padding-top: 160px;
+        }
+        .chart-container.active {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+            z-index: 2;
+        }
+        .chart-container.prev {
+            transform: translateY(-30%) scale(0.9);
+            opacity: 0;
+            z-index: 1;
+        }
+        .chart-container.next {
+            transform: translateY(30%) scale(0.9);
+            opacity: 0;
+            z-index: 1;
+        }
+        /* 图表样式 */
+        .chart {
+            width: 100%;
+            height: calc(100% - 160px);
+            margin-top: 0;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 0;
+            box-shadow: none;
             backdrop-filter: blur(10px);
+            transition: all 1.2s cubic-bezier(0.4, 0.1, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+            transform-origin: center center;
+            will-change: transform, opacity;
+        }
+        .chart-container.active .chart {
+            transform: translateZ(0) rotateX(0);
+        }
+        .chart-container.prev .chart {
+            transform: translateZ(-100px) rotateX(5deg);
+        }
+        .chart-container.next .chart {
+            transform: translateZ(-100px) rotateX(-5deg);
         }
         /* 背景效果 */
         .bg-effect {
-            position: absolute;
+            position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background: radial-gradient(circle at center, rgba(0, 255, 0, 0.1) 0%, transparent 70%);
+            background: radial-gradient(circle at center, 
+                rgba(0, 0, 255, 0.08) 0%,
+                rgba(0, 0, 255, 0.05) 25%,
+                rgba(0, 0, 255, 0.03) 50%,
+                transparent 70%);
             animation: pulse 8s infinite alternate;
+            z-index: 0;
+            transition: all 1s cubic-bezier(0.4, 0, 0.2, 1);
         }
         @keyframes pulse {
-            0% { opacity: 0.3; }
-            100% { opacity: 0.7; }
+            0% { 
+                opacity: 0.2;
+                transform: scale(1);
+                background: radial-gradient(circle at center, 
+                    rgba(0, 0, 255, 0.08) 0%,
+                    rgba(0, 0, 255, 0.05) 25%,
+                    rgba(0, 0, 255, 0.03) 50%,
+                    transparent 70%);
+            }
+            100% { 
+                opacity: 0.4;
+                transform: scale(1.1);
+                background: radial-gradient(circle at center, 
+                    rgba(0, 0, 255, 0.12) 0%,
+                    rgba(0, 0, 255, 0.08) 25%,
+                    rgba(0, 0, 255, 0.05) 50%,
+                    transparent 70%);
+            }
         }
         /* 调试信息样式 */
         .debug-info {
@@ -81,14 +162,47 @@
             color: #fff;
             z-index: 1000;
         }
+        /* 滚动提示 */
+        .scroll-hint {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #fff;
+            font-size: 1.2rem;
+            text-shadow: 0 0 10px rgba(0, 0, 255, 0.5);
+            animation: bounce 2s infinite;
+            z-index: 10;
+        }
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% {
+                transform: translateY(0);
+            }
+            40% {
+                transform: translateY(-20px);
+            }
+            60% {
+                transform: translateY(-10px);
+            }
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="bg-effect"></div>
-        <h1 class="title">美元兑人民币汇率走势图</h1>
+        <h1 class="title">汇率走势图</h1>
         <div class="update-time" id="updateTime">最后更新时间：</div>
-        <div id="chart"></div>
+        <div class="transform-container">
+            <div class="chart-container active" id="usdContainer">
+                <div id="usdChart" class="chart"></div>
+            </div>
+            <div class="chart-container" id="eurContainer">
+                <div id="eurChart" class="chart"></div>
+            </div>
+            <div class="chart-container" id="jpyContainer">
+                <div id="jpyChart" class="chart"></div>
+            </div>
+        </div>
     </div>
     <div class="debug-info" id="debugInfo"></div>
 
@@ -101,15 +215,95 @@
         }
 
         // 初始化图表实例
-        let myChart = null;
-        const chartDom = document.getElementById('chart');
+        let usdChart = null;
+        let eurChart = null;
+        let jpyChart = null;
+        const usdChartDom = document.getElementById('usdChart');
+        const eurChartDom = document.getElementById('eurChart');
+        const jpyChartDom = document.getElementById('jpyChart');
         const updateTimeElement = document.getElementById('updateTime');
 
         // 存储历史数据的对象
         let historicalData = {
             dates: [],
-            rates: []
+            usd_rates: [],
+            eur_rates: [],
+            jpy_rates: []
         };
+
+        // 当前显示的图表索引
+        let currentIndex = 0;
+        const containers = [
+            document.getElementById('usdContainer'),
+            document.getElementById('eurContainer'),
+            document.getElementById('jpyContainer')
+        ];
+
+        // 处理滚动事件
+        let isScrolling = false;
+        
+        // 初始化时设置下一个容器的类
+        for (let i = 1; i < containers.length; i++) {
+            containers[i].classList.add('next');
+        }
+
+        // 更新图表状态的函数
+        function updateChartStates(newIndex) {
+            const transitionDuration = 1200; // 过渡动画持续时间
+            
+            containers.forEach((container, index) => {
+                container.classList.remove('active', 'prev', 'next');
+                
+                // 添加适当的延迟
+                setTimeout(() => {
+                    if (index === newIndex) {
+                        container.classList.add('active');
+                    } else if (index < newIndex) {
+                        container.classList.add('prev');
+                    } else {
+                        container.classList.add('next');
+                    }
+                }, 50);
+            });
+        }
+
+        // 防抖函数
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+
+        // 优化的滚动处理
+        const handleScroll = debounce(function(e) {
+            if (isScrolling) return;
+            
+            const direction = e.deltaY > 0 ? 1 : -1;
+            let nextIndex = currentIndex + direction;
+            
+            // 循环切换
+            if (nextIndex >= containers.length) {
+                nextIndex = 0;
+            } else if (nextIndex < 0) {
+                nextIndex = containers.length - 1;
+            }
+            
+            isScrolling = true;
+            updateChartStates(nextIndex);
+            currentIndex = nextIndex;
+            
+            setTimeout(() => {
+                isScrolling = false;
+            }, 1200); // 与 CSS 过渡时间匹配
+        }, 100);
+
+        window.addEventListener('wheel', handleScroll);
 
         // 从后端API获取汇率数据
         async function fetchExchangeRateData() {
@@ -125,37 +319,67 @@
         }
 
         // 初始化图表
-        function initChart() {
-            if (!myChart) {
-                myChart = echarts.init(chartDom);
+        function initCharts() {
+            if (!usdChart) {
+                usdChart = echarts.init(usdChartDom);
+                eurChart = echarts.init(eurChartDom);
+                jpyChart = echarts.init(jpyChartDom);
                 debug('图表初始化成功');
             }
         }
 
-        // 更新图表显示
-        function updateChartDisplay(data) {
-            if (!data || !data.dates || !data.rates) {
-                debug('数据格式错误');
-                return;
-            }
-
-            debug(`数据长度: dates=${data.dates.length}, rates=${data.rates.length}`);
-            
-            // 计算Y轴范围
-            const minRate = Math.min(...data.rates);
-            const maxRate = Math.max(...data.rates);
+        // 创建图表配置
+        function createChartOption(title, data, color) {
+            const rates = data.filter(rate => rate !== null);
+            const minRate = Math.min(...rates);
+            const maxRate = Math.max(...rates);
             const padding = 0.1;
-            
-            // ECharts配置项
-            const option = {
+
+            // 为日元图表设置特殊的Y轴配置
+            const isJPY = title.includes('日元');
+            const yAxisConfig = {
+                type: 'value',
+                axisLine: {
+                    lineStyle: {
+                        color: 'rgba(255, 255, 255, 0.3)'
+                    }
+                },
+                axisLabel: {
+                    color: '#fff',
+                    formatter: isJPY ? function(value) {
+                        return value.toFixed(4);
+                    } : '{value}'
+                },
+                splitLine: {
+                    lineStyle: {
+                        color: 'rgba(255, 255, 255, 0.1)'
+                    }
+                },
+                min: isJPY ? (minRate * 0.998).toFixed(4) : (minRate - padding).toFixed(4),
+                max: isJPY ? (maxRate * 1.002).toFixed(4) : (maxRate + padding).toFixed(4),
+                interval: isJPY ? ((maxRate - minRate) / 5).toFixed(4) : 0.1
+            };
+
+            return {
+                title: {
+                    text: title,
+                    textStyle: {
+                        color: '#fff',
+                        fontSize: 24,
+                        fontWeight: 'bold'
+                    },
+                    left: 'center',
+                    top: 20
+                },
                 backgroundColor: 'transparent',
                 tooltip: {
                     trigger: 'axis',
                     formatter: function(params) {
-                        return `日期：${params[0].name}<br/>汇率：${params[0].value}`;
+                        const value = isJPY ? params[0].value.toFixed(4) : params[0].value;
+                        return `日期：${params[0].name}<br/>汇率：${value}`;
                     },
                     backgroundColor: 'rgba(0, 0, 0, 0.7)',
-                    borderColor: 'rgba(0, 255, 0, 0.5)',
+                    borderColor: 'rgba(0, 0, 255, 0.5)',
                     borderWidth: 1,
                     textStyle: {
                         color: '#fff'
@@ -169,7 +393,7 @@
                 },
                 xAxis: {
                     type: 'category',
-                    data: data.dates,
+                    data: historicalData.dates,
                     axisLine: {
                         lineStyle: {
                             color: 'rgba(255, 255, 255, 0.3)'
@@ -186,73 +410,53 @@
                         }
                     }
                 },
-                yAxis: {
-                    type: 'value',
-                    axisLine: {
-                        lineStyle: {
-                            color: 'rgba(255, 255, 255, 0.3)'
-                        }
-                    },
-                    axisLabel: {
-                        color: '#fff',
-                        formatter: '{value}'
-                    },
-                    splitLine: {
-                        lineStyle: {
-                            color: 'rgba(255, 255, 255, 0.1)'
-                        }
-                    },
-                    min: (minRate - padding).toFixed(4),
-                    max: (maxRate + padding).toFixed(4),
-                    interval: 0.1
-                },
+                yAxis: yAxisConfig,
                 series: [{
-                    data: data.rates,
+                    data: data,
                     type: 'line',
                     smooth: true,
                     symbol: 'circle',
                     symbolSize: 8,
                     lineStyle: {
                         width: 3,
-                        color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [{
-                            offset: 0,
-                            color: '#00ff00'
-                        }, {
-                            offset: 1,
-                            color: '#00ff88'
-                        }])
+                        color: color
                     },
                     itemStyle: {
-                        color: '#00ff00',
+                        color: color,
                         borderColor: '#fff',
                         borderWidth: 2
                     },
                     areaStyle: {
                         color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{
                             offset: 0,
-                            color: 'rgba(0, 255, 0, 0.3)'
+                            color: color.replace('rgb', 'rgba').replace(')', ', 0.3)')
                         }, {
                             offset: 1,
-                            color: 'rgba(0, 255, 0, 0.1)'
+                            color: color.replace('rgb', 'rgba').replace(')', ', 0.1)')
                         }])
-                    },
-                    emphasis: {
-                        itemStyle: {
-                            color: '#fff',
-                            borderColor: '#00ff00',
-                            borderWidth: 2,
-                            shadowColor: 'rgba(0, 255, 0, 0.5)',
-                            shadowBlur: 10
-                        }
                     }
                 }],
                 animation: true,
                 animationDuration: 2000,
                 animationEasing: 'cubicInOut'
             };
+        }
+
+        // 更新图表显示
+        function updateChartDisplay(data) {
+            if (!data || !data.dates || !data.usd_rates || !data.eur_rates || !data.jpy_rates) {
+                debug('数据格式错误');
+                return;
+            }
+
+            debug(`数据长度: dates=${data.dates.length}, usd_rates=${data.usd_rates.length}, eur_rates=${data.eur_rates.length}, jpy_rates=${data.jpy_rates.length}`);
+            
+            historicalData = data;
 
             try {
-                myChart.setOption(option);
+                usdChart.setOption(createChartOption('美元兑人民币汇率', data.usd_rates, 'rgb(0, 0, 255)'));
+                eurChart.setOption(createChartOption('欧元兑人民币汇率', data.eur_rates, 'rgb(255, 0, 0)'));
+                jpyChart.setOption(createChartOption('日元兑人民币汇率', data.jpy_rates, 'rgb(0, 255, 0)'));
                 debug('图表更新成功');
             } catch (error) {
                 debug(`图表更新失败: ${error.message}`);
@@ -264,7 +468,7 @@
 
         // 更新图表数据
         async function updateChart() {
-            initChart();
+            initCharts();
             const data = await fetchExchangeRateData();
             if (data) {
                 updateChartDisplay(data);
@@ -274,7 +478,7 @@
         // 页面加载完成后初始化
         window.addEventListener('load', function() {
             debug('页面加载完成');
-            initChart();
+            initCharts();
             updateChart();
         });
 
@@ -283,8 +487,10 @@
 
         // 监听窗口大小变化，调整图表大小
         window.addEventListener('resize', function() {
-            if (myChart) {
-                myChart.resize();
+            if (usdChart && eurChart && jpyChart) {
+                usdChart.resize();
+                eurChart.resize();
+                jpyChart.resize();
                 debug('图表大小已调整');
             }
         });
