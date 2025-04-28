@@ -22,9 +22,10 @@ HOST = os.getenv('HOST', '0.0.0.0')
 DB_PATH = os.getenv('DB_PATH', 'exchange_rate.db')
 LOG_PATH = os.getenv('LOG_PATH', 'logs')
 
-# 确保目录存在
-os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
-os.makedirs(LOG_PATH, exist_ok=True)
+# 确保数据库文件所在目录存在
+db_dir = os.path.dirname(DB_PATH)
+if db_dir:  # 只有当路径不是当前目录时才创建
+    os.makedirs(db_dir, exist_ok=True)
 
 # 汇率API配置
 EXCHANGE_API_SOURCES = [
