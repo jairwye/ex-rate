@@ -2,20 +2,28 @@ version: '3.8'
 
 services:
   web:
-    build: .
+    image: jairwye/ex-rate:latest
     ports:
       - "9088:9088"
     volumes:
-      - ./exchange_rate.db:/app/exchange_rate.db
+      - ./data:/app/data  # 数据目录
+      - ./logs:/app/logs  # 日志目录
     environment:
       - FLASK_ENV=production
+      - DB_PATH=/app/data/exchange_rate.db
+      - LOG_PATH=/app/logs
     restart: unless-stopped
+    container_name: ex-rate-web
 
   scheduler:
-    build: .
+    image: jairwye/ex-rate:latest
     command: python schedule_server.py
     volumes:
-      - ./exchange_rate.db:/app/exchange_rate.db
+      - ./data:/app/data  # 数据目录
+      - ./logs:/app/logs  # 日志目录
     environment:
       - FLASK_ENV=production
-    restart: unless-stopped 
+      - DB_PATH=/app/data/exchange_rate.db
+      - LOG_PATH=/app/logs
+    restart: unless-stopped
+    container_name: ex-rate-scheduler 
