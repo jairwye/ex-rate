@@ -17,9 +17,14 @@ app = Flask(__name__, static_folder='.')
 CORS(app, resources={r"/*": {"origins": "*"}})  # 允许所有来源的跨域请求
 
 # 从环境变量获取配置
-PORT = int(os.getenv('PORT', 5000))
+PORT = int(os.getenv('PORT', 9088))
 HOST = os.getenv('HOST', '0.0.0.0')
 DB_PATH = os.getenv('DB_PATH', 'exchange_rate.db')
+LOG_PATH = os.getenv('LOG_PATH', 'logs')
+
+# 确保目录存在
+os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
+os.makedirs(LOG_PATH, exist_ok=True)
 
 # 汇率API配置
 EXCHANGE_API_SOURCES = [
