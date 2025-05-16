@@ -7,6 +7,8 @@ import sys
 import logging
 import requests
 from datetime import datetime
+import psutil
+import atexit
 
 # 配置日志
 logging.basicConfig(
@@ -18,7 +20,57 @@ logging.basicConfig(
     ]
 )
 
+# 进程锁文件路径
+LOCK_FILE = 'schedule_server.lock'
 server_process = None
+
+def check_existing_process():
+    """只检测其他 python.exe 的 schedule_server.py 或 server.py 进程"""
+    current_pid = os.getpid()
+    parent_pid = os.getppid()
+    for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
+        try:
+            if proc.name().lower() == 'python.exe':
+                cmdline = proc.cmdline()
+                if cmdline:
+                    cmdline_str = ' '.join(cmdline).lower()
+                    if ('schedule_server.py' in cmdline_str or 'server.py' in cmdline_str) \
+                        and proc.pid != current_pid and proc.pid != parent_pid:
+                        logging.warning(f'发现已存在的相关进程 (PID: {proc.pid}, 命令: {cmdline_str})')
+                        return True
+        except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+            pass
+    return False
+
+def create_lock_file():
+    """创建锁文件"""
+    with open(LOCK_FILE, 'w') as f:
+        f.write(str(os.getpid()))
+    atexit.register(remove_lock_file)
+
+def remove_lock_file():
+    """删除锁文件"""
+    try:
+        if os.path.exists(LOCK_FILE):
+            os.remove(LOCK_FILE)
+    except Exception as e:
+        logging.error(f'删除锁文件时出错: {e}')
+
+def is_locked():
+    """检查是否有锁文件存在"""
+    if os.path.exists(LOCK_FILE):
+        try:
+            with open(LOCK_FILE, 'r') as f:
+                pid = int(f.read().strip())
+            # 检查进程是否还在运行
+            if psutil.pid_exists(pid):
+                return True
+            else:
+                # 如果进程不存在，删除过期的锁文件
+                remove_lock_file()
+        except Exception:
+            remove_lock_file()
+    return False
 
 def is_workday():
     # 检查是否为工作日（周一至周五）
@@ -33,11 +85,28 @@ def start_server():
     global server_process
     if server_process is None or server_process.poll() is not None:
         try:
+            # 检查是否已有server.py在运行
+            current_pid = os.getpid()
+            parent_pid = os.getppid()
+            for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
+                try:
+                    if proc.name().lower() == 'python.exe':
+                        cmdline = proc.cmdline()
+                        if cmdline and 'server.py' in ' '.join(cmdline).lower() \
+                            and proc.pid != current_pid and proc.pid != parent_pid:
+                            logging.warning('发现已存在的server.py进程，尝试终止')
+                            proc.terminate()
+                            proc.wait(timeout=5)
+                except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+                    pass
+
             # 激活虚拟环境并启动服务器
             activate_script = os.path.join('venv', 'Scripts', 'activate.bat')
             if os.path.exists(activate_script):
+                # 使用PowerShell命令来正确执行激活和启动
+                cmd = f'powershell.exe -Command "& {{. {activate_script}; python server.py}}"'
                 server_process = subprocess.Popen(
-                    f'call {activate_script} && python server.py',
+                    cmd,
                     shell=True,
                     creationflags=subprocess.CREATE_NEW_PROCESS_GROUP
                 )
@@ -84,6 +153,39 @@ def update_exchange_rate():
         logging.info('当前不是工作日或不在服务器运行时间内，跳过更新')
 
 def main():
+    # 检查是否已有实例在运行
+    if check_existing_process():
+        logging.error('发现已存在的相关进程，尝试清理...')
+        # 尝试清理所有相关进程
+        current_pid = os.getpid()
+        parent_pid = os.getppid()
+        for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
+            try:
+                if proc.name().lower() == 'python.exe':
+                    cmdline = proc.cmdline()
+                    if cmdline:
+                        cmdline_str = ' '.join(cmdline).lower()
+                        if ('schedule_server.py' in cmdline_str or 'server.py' in cmdline_str) \
+                            and proc.pid != current_pid and proc.pid != parent_pid:
+                            proc.terminate()
+                            proc.wait(timeout=5)
+            except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+                pass
+        
+        # 删除可能存在的锁文件
+        remove_lock_file()
+        
+        # 等待一小段时间确保进程完全清理
+        time.sleep(2)
+        
+        # 再次检查
+        if check_existing_process():
+            logging.error('无法清理已存在的进程，退出程序')
+            sys.exit(1)
+    
+    # 创建锁文件
+    create_lock_file()
+    
     # 设置定时任务
     schedule.every().day.at("09:00").do(start_server)
     schedule.every().day.at("21:00").do(stop_server)
@@ -110,6 +212,12 @@ def main():
         logging.info('收到终止信号')
         stop_server()
         sys.exit(0)
+    except Exception as e:
+        logging.error(f'发生错误: {e}')
+        stop_server()
+        sys.exit(1)
+    finally:
+        remove_lock_file()
 
 if __name__ == '__main__':
     main() 
