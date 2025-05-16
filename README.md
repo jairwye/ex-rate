@@ -16,32 +16,8 @@
 - 前端：HTML5, ECharts
 - 数据库：SQLite
 - 定时任务：APScheduler
-- 容器化：Docker
 
 ## 安装和使用
-
-### 使用 Docker 部署（推荐）
-
-1. 克隆仓库：
-```bash
-git clone https://github.com/jairwye/ex-rate.git
-cd ex-rate
-```
-
-2. 构建并启动服务：
-```bash
-docker-compose up --build
-```
-
-3. 在后台运行：
-```bash
-docker-compose up -d
-```
-
-4. 停止服务：
-```bash
-docker-compose down
-```
 
 ### 手动部署
 
@@ -90,6 +66,13 @@ python server.py
 一个实时显示美元、欧元、日元兑人民币汇率的可视化工具。
 
 ## 版本历史
+
+### v1.2 (2024-05-16)
+- 改进进程管理逻辑，修复进程检测和清理问题
+- 优化启动脚本，解决编码和进程冲突问题
+- 增加自动清理功能
+- 移除Docker相关内容，精简文档
+- 改进错误处理和日志记录
 
 ### v1.1 (2024-03-21)
 - 优化了图表切换动画效果
